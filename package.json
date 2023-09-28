@@ -1,0 +1,26 @@
+{
+  "name": "sellotools-be",
+  "version": "1.0.0",
+  "description": "sello tools back end",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js"
+  },
+  "author": "Leon Chinn",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^6.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-fileupload": "^1.4.0",
+    "jszip": "^3.10.1",
+    "mssql": "^9.1.3",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "sequelize": "^6.17.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
