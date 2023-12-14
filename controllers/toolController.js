@@ -54,7 +54,7 @@ const sortLabels = async(pdfFile) => {
             const reg = new RegExp('\\n\\n')
             let textArray = data.text.split(reg)
             console.log(textArray.length)
-            let cpLabelArr = [], apLabelArr = [], alliedLabelArr = [], tollLabelArr = [], hunterLabelArr = []
+            let cpLabelArr = [], apLabelArr = [], alliedLabelArr = [], tollLabelArr = [], hunterLabelArr = [], capitalLabelArr = []
             for (let i = 0; i < textArray.length; i++) {
                 let labelItem = {carrier: '', orderId: '', page: ''}
                 if(textArray[i].includes('Couriers Please')) {
@@ -63,7 +63,7 @@ const sortLabels = async(pdfFile) => {
                     labelItem.orderId = Number(textArray[i].split("Order:TW")[1].split("Date")[0]),
                     labelItem.page = i
                     cpLabelArr.push(labelItem)
-                }else if(textArray[i].includes('Order Ref: ')) {
+                }else if(textArray[i].includes('Order Ref: ')) { 
                     //console.log("Au post")
                     labelItem.carrier = "au post",
                     labelItem.orderId = Number(textArray[i].split("Order Ref: TW")[1].split(new RegExp('\\n'))[0]),
@@ -87,6 +87,12 @@ const sortLabels = async(pdfFile) => {
                     labelItem.orderId = Number(textArray[i].split("Order Ref.TW")[1].split("Date")[0]),
                     labelItem.page = i
                     hunterLabelArr.push(labelItem)
+                }else if(textArray[i].includes('Delivered by:')) {
+                    console.log("capital")
+                    labelItem.carrier = "capital"
+                    labelItem.orderId = Number(textArray[i].split("Ref: TW")[1].split(new RegExp('\\n'))[0]),
+                    labelItem.page = i
+                    capitalLabelArr.push(labelItem)
                 }
             }
             cpLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
@@ -94,8 +100,9 @@ const sortLabels = async(pdfFile) => {
             hunterLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
             tollLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
             alliedLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
+            capitalLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
 
-            const result = [...cpLabelArr, ...apLabelArr, ...hunterLabelArr, ...tollLabelArr, ...alliedLabelArr]
+            const result = [...cpLabelArr, ...apLabelArr, ...hunterLabelArr, ...tollLabelArr, ...alliedLabelArr, ...capitalLabelArr]
             
             const mergedPdf = await PDFDocument.create()
 
@@ -220,7 +227,7 @@ const shippingRates = async(req, res) => {
 
 const testAPI = async(req, res) => {
     console.log("test api was called")
-    return res.status(200).json({mesage:"test api called success"})
+    return res.status(200).json({mesage:"new test api called success"})
 }
 
 module.exports = {shippingRates,splitBigTextLabels,downloadBigTextLabels,testAPI}
