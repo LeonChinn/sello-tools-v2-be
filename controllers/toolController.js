@@ -125,6 +125,78 @@ const sortLabels = async(pdfFile) => {
 }
 
 //sortLabels()
+const sortFreedomLabels = async(pdfFile) => {
+    try {
+        //const pdfFile = await fs.readFile(path.join('statics', 'originalPdf.pdf'))
+        await pdfparse(pdfFile).then(async(data) => {
+            await fs.writeFile('data.txt',JSON.stringify(data))
+            const reg = new RegExp('\\n\\n')
+            let textArray = data.text.split(reg)
+            console.log("textArray length",textArray.length)
+            let cpLabelArr = [], apLabelArr = [], alliedLabelArr = [], tollLabelArr = [], hunterLabelArr = [], capitalLabelArr = []
+            for (let i = 0; i < textArray.length; i++) {
+                let labelItem = {carrier: '', orderId: '', page: ''}
+                if(textArray[i].includes('Couriers Please')) {
+                    //console.log("courier please")
+                    labelItem.carrier = "courier please",
+                    labelItem.orderId = Number(textArray[i].split("Order:")[1].split("-")[0]),
+                    labelItem.page = i
+                    cpLabelArr.push(labelItem)
+                }else if(textArray[i].includes('Order Ref: ')) { 
+                    //console.log("Au post")
+                    labelItem.carrier = "au post",
+                    labelItem.orderId = Number(textArray[i].split("Order Ref: ")[1].split("-")[0]),
+                    labelItem.page = i
+                    apLabelArr.push(labelItem)
+                }else if(textArray[i].includes('Dangerous Goods Enclosed')) {
+                    //console.log("Allied")
+                    labelItem.carrier = "allied",
+                    labelItem.orderId = Number(textArray[i].split("Order Ref:")[1].split("-")[0]),
+                    labelItem.page = i
+                    alliedLabelArr.push(labelItem)
+                }else if(textArray[i].includes('Express Parcels')) {
+                    //console.log("Toll")
+                    labelItem.carrier = "toll",
+                    labelItem.orderId = Number(textArray[i].split("REF: ")[1].split("-")[0]),
+                    labelItem.page = i
+                    tollLabelArr.push(labelItem)
+                }else if(textArray[i].includes('Label no:')) {
+                    console.log("capital")
+                    labelItem.carrier = "capital"
+                    labelItem.orderId = Number(textArray[i].split("Ref: ")[1].split("-")[0]),
+                    labelItem.page = i
+                    capitalLabelArr.push(labelItem)
+                }
+            }
+            cpLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
+            apLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
+            hunterLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
+            tollLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
+            alliedLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
+            capitalLabelArr.sort((firstItem, secondItem) => firstItem.orderId - secondItem.orderId)
+           
+
+            const result = [...cpLabelArr, ...apLabelArr, ...hunterLabelArr, ...tollLabelArr, ...alliedLabelArr, ...capitalLabelArr]
+            
+            const mergedPdf = await PDFDocument.create()
+
+            for(let item of result) {
+                
+                const pdfData = await fs.readFile(path.join('download', `${item.page}.pdf`))
+                let document = await PDFDocument.load(pdfData)
+                const copiedPages = await mergedPdf.copyPages(document, document.getPageIndices())
+                copiedPages.forEach((page) => mergedPdf.addPage(page))
+                await fs.appendFile(path.join('result', `order_list.txt`), `${item.orderId} \n` , "UTF-8",{'flags': 'a+'});
+            }
+            console.log('txt has been generated')
+            const buf = await mergedPdf.save()
+            await fs.writeFile(path.join('result', `result.pdf`), buf);
+            console.log('pdf has been generated')
+        })
+    } catch (error) {
+        console.log('error', error)
+    }
+}
 
 const execPromise = promisify(exec)
 
@@ -180,9 +252,37 @@ const splitBigTextLabels = async(req, res) => {
     }
 }
 
-const downloadBigTextLabels = async(req, res) => {
+const splitFreedomLabels = async(req, res) => {
+    console.log("slipt freedom labels", req.files.file)
+    let file = req.files.file
+    try {
+        //delete previous files
+        //await emptyFiles('statics')
+        await emptyFiles('download')
+        await emptyFiles('result')
+        console.log('previous invoices have been deleted')
+        //move new file to static folder
+        // await file.mv('statics/originalPdf.pdf', (err) => {
+        //     if(err) {
+        //         return res.status(500).send("move file error", err)
+        //     }
+        // })
+        //split original files to saperated files by page
+        await splitPDF('download', file.data)
+        console.log('file has been saperated!')
+        await sortFreedomLabels(file.data)
+        console.log('sorted file has been generated!')
+        return res.status(200).json({message: "Sorted Pdf file is ready to downloaded!"})
+    } catch (error) {
+        console.log("upload error", error)
+        return res.status(400).json(req.responder.failed('upload failed', error.message, 400))
+    }
+}
+
+const  downloadBigTextLabels = async(req, res) => {
     try {
         //compress big pdf file
+        console.log("download begin")
         await compressFiles();
         //generate a zip file contains pdf and txt
         const zip = new JSZip();
@@ -230,4 +330,4 @@ const testAPI = async(req, res) => {
     return res.status(200).json({mesage:"new test api called success"})
 }
 
-module.exports = {shippingRates,splitBigTextLabels,downloadBigTextLabels,testAPI}
+module.exports = {shippingRates,splitBigTextLabels,downloadBigTextLabels,testAPI,splitFreedomLabels}
